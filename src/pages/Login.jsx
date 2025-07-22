@@ -1,18 +1,28 @@
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../App';
 
-const Login = ({ setIsAuthenticated }) => {
+const Login = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const navigate = useNavigate();
+  
+  // Destructure properly from context
+  const { setIsAuthenticated } = useContext(AuthContext);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Simple validation
+    
+    // Basic validation
     if (email && password) {
-      setIsAuthenticated(true);
-      navigate('/dashboard');
+      // Make sure setIsAuthenticated is a function
+      if (typeof setIsAuthenticated === 'function') {
+        setIsAuthenticated(true);
+        navigate('/dashboard');
+      } else {
+        console.error('setIsAuthenticated is not a function');
+      }
     } else {
       setError('Please enter both email and password');
     }

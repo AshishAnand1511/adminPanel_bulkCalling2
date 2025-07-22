@@ -1,5 +1,7 @@
-import { FiMenu, FiBell, FiUser, FiX } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
+import { FiMenu, FiBell, FiX, FiLogOut, FiLogIn } from 'react-icons/fi';
+import { useContext } from 'react';
+import { AuthContext } from '../App';
 
 const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
   const navLinks = [
@@ -9,6 +11,12 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
     { name: 'Trigger Calls', path: '/trigger-calls' },
     { name: 'Call History', path: '/call-history' },
   ];
+
+  const { isAuthenticated, setIsAuthenticated } = useContext(AuthContext);
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-20 lg:left-0">
@@ -22,7 +30,7 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
             {sidebarOpen ? <FiX className="w-5 h-5" /> : <FiMenu className="w-5 h-5" />}
           </button>
         </div>
-        
+
         {/* Desktop Navigation */}
         <div className="hidden lg:flex space-x-6">
           {navLinks.map((link) => (
@@ -35,19 +43,31 @@ const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
             </Link>
           ))}
         </div>
-        
+
+        {/* User controls */}
         {/* User controls */}
         <div className="flex items-center space-x-4">
-          <button className="p-2 rounded-full hover:bg-gray-100 text-gray-600 relative">
-            <FiBell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
-          <div className="flex items-center">
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-              <FiUser className="text-blue-600 w-4 h-4" />
-            </div>
-            <span className="ml-2 text-sm font-medium text-gray-700 hidden md:inline">Admin</span>
-          </div>
+          {isAuthenticated ? (
+            <>
+              <button className="p-2 rounded-full hover:bg-gray-100 text-gray-600 relative">
+                <FiBell className="w-5 h-5" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+              </button>
+              <button
+                onClick={handleLogout}
+                className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <Link
+              to="/login"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Login
+            </Link>
+          )}
         </div>
       </div>
     </header>
