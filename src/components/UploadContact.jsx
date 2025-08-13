@@ -1,41 +1,84 @@
 import { useState } from 'react';
 import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 import { FiUpload, FiEye, FiTrash2 } from 'react-icons/fi';
+import { auth, db } from "../firebaseConfig";
+import { doc, collection, setDoc } from 'firebase/firestore';
 
 const UploadContact = () => {
   const [csvData, setCsvData] = useState([]);
   const [fileName, setFileName] = useState('');
   const [showTable, setShowTable] = useState(false);
   const [fileInfo, setFileInfo] = useState(null);
-  const [uploadProgress, setUploadProgress] = useState(0); // ✅ FIXED
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploading, setUploading] = useState(false); // ✅ New state
 
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (
-      file &&
-      (file.type === 'text/csv' || file.name.endsWith('.csv') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))
-    ) {
-      setFileInfo(file);
-      setFileName(file.name);
+  // ✅ Function to upload contacts to Firestore
+  const uploadToFirestore = async (contacts) => {
+    const user = auth.currentUser;
+    if (!user) {
+      alert("Please login first.");
+      return;
+    }
 
-      // Simulate progress (since it's local parsing)
-      setUploadProgress(10);
-      setTimeout(() => setUploadProgress(50), 200);
-      setTimeout(() => setUploadProgress(100), 500);
+    try {
+      setUploading(true);
+      const userRef = doc(db, "users", user.uid);
+      const contactsRef = collection(userRef, "contacts");
 
-      Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        worker: true,
-        complete: function (results) {
-          setCsvData(results.data);
-          setShowTable(false);
-        },
-      });
-    } else {
-      alert('Please upload a valid CSV or Excel file.');
+      for (let contact of contacts) {
+        const contactDoc = doc(contactsRef); // auto-ID
+        await setDoc(contactDoc, contact);
+      }
+
+      alert("Contacts uploaded to Firestore!");
+    } catch (error) {
+      console.error("Upload error:", error);
+      alert("Failed to upload contacts.");
+    } finally {
+      setUploading(false);
     }
   };
+
+const handleFileUpload = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  setFileInfo(file);
+  setFileName(file.name);
+  setUploadProgress(10);
+  setTimeout(() => setUploadProgress(50), 200);
+  setTimeout(() => setUploadProgress(100), 500);
+
+  const reader = new FileReader();
+
+if (file.name.endsWith('.csv')) {
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: function (results) {
+      setCsvData(results.data);
+      setShowTable(false);
+      uploadToFirestore(results.data); // ✅ Un-commented for CSV
+    },
+  });
+} else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+  reader.onload = (evt) => {
+    const data = new Uint8Array(evt.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const jsonData = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+    setCsvData(jsonData);
+    setShowTable(false);
+    uploadToFirestore(jsonData); // ✅ Un-commented for Excel
+  };
+  reader.readAsArrayBuffer(file);
+}
+else {
+    alert('Please upload a valid CSV or Excel file.');
+  }
+};
 
   const handleRemoveFile = () => {
     setCsvData([]);
@@ -64,6 +107,7 @@ const UploadContact = () => {
               className="hidden"
               accept=".csv,.xlsx,.xls"
               onChange={handleFileUpload}
+              disabled={uploading} // ✅ disable when uploading
             />
           </label>
 
@@ -101,6 +145,7 @@ const UploadContact = () => {
                 onClick={handleRemoveFile}
                 className="text-red-500 hover:text-red-700"
                 title="Remove"
+                disabled={uploading} // ✅ disable when uploading
               >
                 <FiTrash2 size={18} />
               </button>
