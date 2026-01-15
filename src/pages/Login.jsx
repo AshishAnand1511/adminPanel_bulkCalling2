@@ -1,6 +1,9 @@
 import { useContext, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../App';
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from '../firebaseConfig'; // correct path
+
 
 const Login = () => {
   const navigate = useNavigate();
@@ -11,22 +14,27 @@ const Login = () => {
   // Destructure properly from context
   const { setIsAuthenticated } = useContext(AuthContext);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    // Basic validation
-    if (email && password) {
-      // Make sure setIsAuthenticated is a function
-      if (typeof setIsAuthenticated === 'function') {
-        setIsAuthenticated(true);
-        navigate('/dashboard');
-      } else {
-        console.error('setIsAuthenticated is not a function');
-      }
-    } else {
-      setError('Please enter both email and password');
+const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  if (!email || !password) {
+    setError('Please enter both email and password');
+    return;
+  }
+
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    console.log("User logged in:", userCredential.user);
+
+    if (typeof setIsAuthenticated === 'function') {
+      setIsAuthenticated(true);
+      navigate('/dashboard');
     }
-  };
+  } catch (err) {
+    console.error("Firebase login error:", err.message);
+    setError('Invalid email or password');
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
